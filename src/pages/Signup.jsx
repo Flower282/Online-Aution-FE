@@ -1,26 +1,28 @@
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 // USING TEST VERSION (no backend needed)
-import { login } from "../store/auth/authSlice.test";
-// import { login } from "../store/auth/authSlice"; // Use this when you have backend
+import { signup } from "../store/auth/authSlice.test";
+// import { signup } from "../store/auth/authSlice"; // Use this when you have backend
 import { Link } from "react-router";
 import LoadingScreen from "../components/LoadingScreen";
 
-const Login = () => {
-  const dispatch = useDispatch();
+const Signup = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const { user, loading, error } = useSelector((state) => state.auth);
+
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Dispatch login action (test version - no unwrap needed)
-    dispatch(login(formData));
+    // Dispatch signup action (test version - no unwrap needed)
+    dispatch(signup(formData));
   };
 
   useEffect(() => {
@@ -36,9 +38,34 @@ const Login = () => {
       <main className="flex-grow flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white p-8 rounded-sm shadow">
-            <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+            <h1 className="text-2xl font-bold mb-6 text-center">
+              Create an Account
+            </h1>
 
             <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Full Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      name: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+
               <div className="mb-4">
                 <label
                   htmlFor="email"
@@ -82,7 +109,11 @@ const Login = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
                   placeholder="••••••••"
                   required
+                  minLength={8}
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Password must be at least 8 characters long
+                </p>
               </div>
 
               {error && (
@@ -96,23 +127,17 @@ const Login = () => {
                 disabled={loading}
                 className="w-full bg-indigo-800 text-white py-2 px-4 rounded-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Logging in..." : "Login"}
+                {loading ? "Creating account..." : "Sign Up"}
               </button>
             </form>
 
-            <div className="mt-4 text-center text-sm text-gray-600">
-              <Link to="#" className="hover:underline">
-                Forgot your password?
-              </Link>
-            </div>
-
             <div className="mt-6 text-center text-sm text-gray-600">
-              Don't have an account?{" "}
+              Already have an account?{" "}
               <Link
-                to="/signup"
+                to="/login"
                 className="text-indigo-800 font-medium hover:underline"
               >
-                Sign up
+                Login
               </Link>
             </div>
           </div>
@@ -122,4 +147,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;

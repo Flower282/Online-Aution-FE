@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { placeBid, viewAuction, deleteAuction } from "../api/auction.js";
 import { useSelector } from "react-redux";
 import LoadingScreen from "../components/LoadingScreen.jsx";
+import Toast from "../components/Toast.jsx";
 
 export const ViewAuction = () => {
   const { id } = useParams();
@@ -12,6 +13,7 @@ export const ViewAuction = () => {
   const navigate = useNavigate();
   const inputRef = useRef();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["viewAuctions", id],
@@ -25,9 +27,10 @@ export const ViewAuction = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["viewAuctions"] });
       if (inputRef.current) inputRef.current.value = "";
+      setToast({ message: "Đặt giá thành công!", type: "success" });
     },
     onError: (error) => {
-      alert(error.message || "Failed to place bid. Please try again.");
+      setToast({ message: error.message || "Không thể đặt giá. Vui lòng thử lại.", type: "error" });
     },
   });
 
@@ -36,11 +39,12 @@ export const ViewAuction = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allAuction"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
-      alert("Auction deleted successfully!");
-      navigate("/auction");
+      setToast({ message: "Xóa auction thành công!", type: "success" });
+      // Navigate after a short delay to show the toast
+      setTimeout(() => navigate("/auction"), 1500);
     },
     onError: (error) => {
-      alert(error.message || "Failed to delete auction. Please try again.");
+      setToast({ message: error.message || "Không thể xóa auction. Vui lòng thử lại.", type: "error" });
     },
   });
 
@@ -92,6 +96,9 @@ export const ViewAuction = () => {
       </div>
     );
   }
+
+  // Check if seller is inactive
+  const isSellerInactive = data.seller?.isActive === false;
 
   const handleBidSubmit = (e) => {
     e.preventDefault();
@@ -179,8 +186,46 @@ export const ViewAuction = () => {
               </div>
             </div>
 
+            {/* Warning if auction ended */}
+            {!isActive && (
+              <div className="bg-gray-50 border-2 border-gray-300 p-6 rounded-md shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Đấu giá đã kết thúc</h3>
+                    <p className="text-gray-700 text-sm">
+                      Phiên đấu giá này đã kết thúc. Không thể đặt giá thêm.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Warning if seller is inactive */}
+            {isSellerInactive && isActive && (
+              <div className="bg-red-50 border-2 border-red-200 p-6 rounded-md shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-red-800 mb-2">Không thể đấu giá</h3>
+                    <p className="text-red-700 text-sm">
+                      Tài khoản người bán đã bị vô hiệu hóa. Bạn có thể xem thông tin nhưng không thể đặt giá cho phiên đấu giá này.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Bid Form */}
-            {data.seller._id != user.user._id && isActive && (
+            {data.seller._id != user.user._id && isActive && !isSellerInactive && (
               <div className="bg-white p-6 rounded-md shadow-md border border-gray-200">
                 <h3 className="text-lg font-semibold mb-4">Place Your Bid</h3>
                 <form onSubmit={handleBidSubmit} className="space-y-4">
@@ -215,9 +260,20 @@ export const ViewAuction = () => {
             )}
 
             {/* Seller Info */}
-            <div className="bg-white p-6 rounded-md shadow-md border border-gray-200">
+            <div className={`p-6 rounded-md shadow-md border ${isSellerInactive
+              ? 'bg-red-50 border-red-200'
+              : 'bg-white border-gray-200'
+              }`}>
               <h3 className="text-lg font-semibold mb-3">Seller Information</h3>
-              <p className="text-gray-900 font-medium">{data.seller.name}</p>
+              <p className={`font-medium ${isSellerInactive ? 'text-red-700' : 'text-gray-900'
+                }`}>
+                {isSellerInactive ? 'Tài khoản bị vô hiệu hóa' : data.seller.name}
+              </p>
+              {isSellerInactive && (
+                <p className="text-xs text-red-600 mt-2">
+                  Tài khoản này đã bị vô hiệu hóa bởi quản trị viên
+                </p>
+              )}
             </div>
 
             {/* Admin Delete Button */}
@@ -300,6 +356,15 @@ export const ViewAuction = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

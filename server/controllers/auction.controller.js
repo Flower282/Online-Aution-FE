@@ -47,7 +47,7 @@ export const showAuction = async (req, res) => {
     try {
         await connectDB();
         const auction = await Product.find({ itemEndDate: { $gt: new Date() } })
-            .populate("seller", "name")
+            .populate("seller", "name isActive")
             .select("itemName itemDescription currentPrice bids itemEndDate itemCategory itemPhoto seller")
             .sort({ createdAt: -1 })
             .lean();
@@ -60,7 +60,10 @@ export const showAuction = async (req, res) => {
             bidsCount: auction.bids?.length || 0,
             timeLeft: Math.max(0, new Date(auction.itemEndDate) - new Date()),
             itemCategory: auction.itemCategory,
-            sellerName: auction.seller?.name || "Unknown",
+            sellerName: auction.seller?.isActive === false
+                ? "Tài khoản bị vô hiệu hóa"
+                : (auction.seller?.name || "Người dùng không tồn tại"),
+            sellerActive: auction.seller?.isActive !== false,
             itemPhoto: auction.itemPhoto,
         }));
 
@@ -76,7 +79,7 @@ export const auctionById = async (req, res) => {
         await connectDB();
         const { id } = req.params;
         const auction = await Product.findById(id)
-            .populate("seller", "name")
+            .populate("seller", "name isActive")
             .populate("bids.bidder", "name")
             .lean();
 
@@ -102,10 +105,20 @@ export const placeBid = async (req, res) => {
         const user = req.user.id;
         const { id } = req.params;
 
-        const product = await Product.findById(id).populate('bids.bidder', "name");
+        const product = await Product.findById(id)
+            .populate('bids.bidder', "name")
+            .populate('seller', 'isActive');
         if (!product) return res.status(404).json({ message: "Auction not found" });
 
-        if (new Date(product.itemEndDate) < new Date()) return res.status(400).json({ message: "Auction has already ended" });
+        // Check if auction has ended
+        if (new Date(product.itemEndDate) < new Date()) {
+            return res.status(400).json({ message: "Phiên đấu giá đã kết thúc. Không thể đặt giá thêm." });
+        }
+
+        // Check if seller is active
+        if (product.seller && product.seller.isActive === false) {
+            return res.status(403).json({ message: "Không thể đấu giá. Tài khoản người bán đã bị vô hiệu hóa." });
+        }
 
         const minBid = Math.max(product.currentPrice, product.startingPrice) + 1;
         const maxBid = Math.max(product.currentPrice, product.startingPrice) + 10;
@@ -153,7 +166,7 @@ export const dashboardData = async (req, res) => {
         let latestAuctions = [];
         try {
             const globalAuction = await Product.find({ itemEndDate: { $gt: dateNow } })
-                .populate("seller", "name")
+                .populate("seller", "name isActive")
                 .sort({ createdAt: -1 })
                 .limit(3)
                 .lean();
@@ -166,7 +179,7 @@ export const dashboardData = async (req, res) => {
                 bidsCount: auction.bids?.length || 0,
                 timeLeft: Math.max(0, new Date(auction.itemEndDate) - new Date()),
                 itemCategory: auction.itemCategory,
-                sellerName: auction.seller?.name || "Unknown",
+                sellerName: auction.seller?.name || "Người dùng không tồn tại",
                 itemPhoto: auction.itemPhoto,
             }));
         } catch (err) {
@@ -177,7 +190,7 @@ export const dashboardData = async (req, res) => {
         let latestUserAuctions = [];
         try {
             const userAuction = await Product.find({ seller: userObjectId })
-                .populate("seller", "name")
+                .populate("seller", "name isActive")
                 .sort({ createdAt: -1 })
                 .limit(3)
                 .lean();
@@ -190,7 +203,7 @@ export const dashboardData = async (req, res) => {
                 bidsCount: auction.bids?.length || 0,
                 timeLeft: Math.max(0, new Date(auction.itemEndDate) - new Date()),
                 itemCategory: auction.itemCategory,
-                sellerName: auction.seller?.name || "Unknown",
+                sellerName: auction.seller?.name || "Người dùng không tồn tại",
                 itemPhoto: auction.itemPhoto,
             }));
         } catch (err) {
@@ -218,7 +231,7 @@ export const myAuction = async (req, res) => {
     try {
         await connectDB();
         const auction = await Product.find({ seller: req.user.id })
-            .populate("seller", "name")
+            .populate("seller", "name isActive")
             .select("itemName itemDescription currentPrice bids itemEndDate itemCategory itemPhoto seller")
             .sort({ createdAt: -1 })
             .lean();
@@ -231,7 +244,7 @@ export const myAuction = async (req, res) => {
             bidsCount: auction.bids?.length || 0,
             timeLeft: Math.max(0, new Date(auction.itemEndDate) - new Date()),
             itemCategory: auction.itemCategory,
-            sellerName: auction.seller?.name || "Unknown",
+            sellerName: auction.seller?.name || "Người dùng không tồn tại",
             itemPhoto: auction.itemPhoto,
         }));
 

@@ -42,7 +42,7 @@ export const updateUserRole = async (userId, newRole) => {
     }
 };
 
-// Delete user (future functionality)
+// Deactivate user (was delete)
 export const deleteUser = async (userId) => {
     try {
         const res = await axios.delete(`${VITE_API}/admin/users/${userId}`,
@@ -50,8 +50,22 @@ export const deleteUser = async (userId) => {
         );
         return res.data;
     } catch (error) {
-        console.error(error?.response?.data?.error || "Can't delete user");
-        throw new Error(error?.response?.data?.error || "Failed to delete user. Please try again.");
+        console.error(error?.response?.data?.error || "Can't deactivate user");
+        throw new Error(error?.response?.data?.error || "Failed to deactivate user. Please try again.");
+    }
+};
+
+// Reactivate user
+export const reactivateUser = async (userId) => {
+    try {
+        const res = await axios.patch(`${VITE_API}/admin/users/${userId}/reactivate`,
+            {},
+            { withCredentials: true }
+        );
+        return res.data;
+    } catch (error) {
+        console.error(error?.response?.data?.error || "Can't reactivate user");
+        throw new Error(error?.response?.data?.error || "Failed to reactivate user. Please try again.");
     }
 };
 

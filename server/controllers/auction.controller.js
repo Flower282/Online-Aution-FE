@@ -176,10 +176,12 @@ export const dashboardData = async (req, res) => {
                 itemName: auction.itemName,
                 itemDescription: auction.itemDescription,
                 currentPrice: auction.currentPrice,
+                startingPrice: auction.startingPrice,
                 bidsCount: auction.bids?.length || 0,
                 timeLeft: Math.max(0, new Date(auction.itemEndDate) - new Date()),
                 itemCategory: auction.itemCategory,
                 sellerName: auction.seller?.name || "Người dùng không tồn tại",
+                sellerActive: auction.seller?.isActive !== false,
                 itemPhoto: auction.itemPhoto,
             }));
         } catch (err) {
@@ -189,25 +191,30 @@ export const dashboardData = async (req, res) => {
         // Get user's auctions with error handling
         let latestUserAuctions = [];
         try {
+            console.log(`🔍 Fetching auctions for user: ${userObjectId}`);
             const userAuction = await Product.find({ seller: userObjectId })
                 .populate("seller", "name isActive")
                 .sort({ createdAt: -1 })
                 .limit(3)
                 .lean();
 
+            console.log(`📊 Found ${userAuction.length} auctions for user`);
+
             latestUserAuctions = userAuction.map(auction => ({
                 _id: auction._id,
                 itemName: auction.itemName,
                 itemDescription: auction.itemDescription,
                 currentPrice: auction.currentPrice,
+                startingPrice: auction.startingPrice,
                 bidsCount: auction.bids?.length || 0,
                 timeLeft: Math.max(0, new Date(auction.itemEndDate) - new Date()),
                 itemCategory: auction.itemCategory,
                 sellerName: auction.seller?.name || "Người dùng không tồn tại",
+                sellerActive: auction.seller?.isActive !== false,
                 itemPhoto: auction.itemPhoto,
             }));
         } catch (err) {
-            console.error("Error fetching user auctions:", err.message);
+            console.error("❌ Error fetching user auctions:", err.message);
         }
 
         return res.status(200).json({
